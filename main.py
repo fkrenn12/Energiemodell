@@ -1,5 +1,5 @@
-from msvcrt import locking
-
+import json
+import time
 import flet as ft
 from serial_comm import serial_client
 from simulator import Simulator
@@ -7,9 +7,16 @@ import threading
 
 
 def main(page: ft.Page):
-    def click(e=None):
-        print('Button clicked')
-        text.value = "Button Clicked"
+    def click_start(e=None):
+        print('Start Button clicked')
+        text.value = "Start Button Clicked"
+        s1.run()
+        page.update()
+
+    def click_stop(e=None):
+        print('Stop Button clicked')
+        text.value = "Stop Button Clicked"
+        s1.stop()
         page.update()
 
     def slider_change(e=None):
@@ -26,7 +33,9 @@ def main(page: ft.Page):
     def simulator_input(payload: str):
         with lock:
             print(f'Readed from simulator: {payload}')
-            text.value = payload
+            payload = json.loads(payload)
+            solar_power = payload['solar_power']
+            text.value = solar_power
             page.update()
 
     lock = threading.Lock()
@@ -36,10 +45,17 @@ def main(page: ft.Page):
     page.margin = ft.Margin(0, 0, 0, 0)
     page.scroll = "adaptive"
 
-    page.add(ft.ElevatedButton(content=ft.Text("Click me"),
-                               on_click=click,
-                               style=ft.ButtonStyle(bgcolor={ft.ControlState.HOVERED: ft.Colors.BLUE}),
-                               ))
+    start_button = ft.ElevatedButton(content=ft.Text("Start simulation"),
+                                     on_click=click_start,
+                                     style=ft.ButtonStyle(bgcolor={ft.ControlState.HOVERED: ft.Colors.BLUE}),
+                                     )
+
+    stop_button = ft.ElevatedButton(content=ft.Text("Stop simulation"),
+                                    on_click=click_stop,
+                                    style=ft.ButtonStyle(bgcolor={ft.ControlState.HOVERED: ft.Colors.BLUE}),
+                                    )
+
+    page.add(ft.Row([start_button, stop_button], alignment=ft.MainAxisAlignment.SPACE_AROUND))
     page.add(ft.Text("PWM Einstellung"))
     page.add(ft.Slider(on_change=slider_change))
     text = ft.Text("Hier erscheint Ausgabetext")
@@ -49,11 +65,9 @@ def main(page: ft.Page):
     serial_client.register_callback(serial_input)
     # serial_client.open(port='COM2', baud_rate=115200)
     # serial_client.write()
-    s1.start()
     s1.register_callback(simulator_input)
 
 
 s1 = Simulator()
-s2 = Simulator()
 
 ft.app(target=main)
